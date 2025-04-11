@@ -1,25 +1,10 @@
 import asyncio
-import websockets
 import json
+from websockets.legacy.server import serve
+
 import os
-from http.server import SimpleHTTPRequestHandler
-from socketserver import TCPServer
-import threading
+PORT = int(os.environ.get("PORT", 12345))
 
-# ======= HTTP SERVER CONFIG =======
-HTTP_PORT = 8000  # For serving static files (client.html etc.)
-STATIC_DIR = "client"  # Folder with HTML/CSS/JS files
-
-# Change current directory to static folder
-os.chdir(STATIC_DIR)
-
-def start_http_server():
-    with TCPServer(("", HTTP_PORT), SimpleHTTPRequestHandler) as httpd:
-        print(f"HTTP server running at http://0.0.0.0:{HTTP_PORT}")
-        httpd.serve_forever()
-
-# ======= WEBSOCKET CONFIG =======
-PORT = int(os.environ.get("PORT", 12345))  # For WebSocket server
 clients = {}  # websocket -> name
 name_to_ws = {}  # name -> websocket
 monitor_clients = set()
@@ -32,7 +17,8 @@ async def broadcast_user_list():
     for monitor in monitor_clients:
         await monitor.send(msg)
 
-async def handler(websocket, path):
+async def handler(websocket):
+    path = websocket.path
     if path == "/monitor":
         monitor_clients.add(websocket)
         await websocket.send(json.dumps({ "type": "users", "users": list(clients.values()) }))
@@ -43,6 +29,7 @@ async def handler(websocket, path):
             monitor_clients.remove(websocket)
         return
 
+    # First message = username
     name = await websocket.recv()
     if name.lower() in (n.lower() for n in name_to_ws):
         await websocket.send(json.dumps({ "type": "error", "error": "User with this name already exist."}))
@@ -56,7 +43,7 @@ async def handler(websocket, path):
                 try:
                     data = json.loads(message)
                     if data.get("type") == "file":
-                        payload = {
+                        file_payload = {
                             "type": "file",
                             "from": name,
                             "to": data["to"],
@@ -66,43 +53,46 @@ async def handler(websocket, path):
                             "data": data["data"]
                         }
                     elif data.get("type") == "normal_message":
-                        payload = {
+                        file_payload = {
                             "type": "normal_message",
                             "from": name,
                             "to": data["to"],
                             "message": data["message"],
                         }
+                    # private msg
                     if data.get("to") != "":
                         recipient_name = data.get("to")
                         recipient_ws = name_to_ws.get(recipient_name)
                         if recipient_ws:
-                            await recipient_ws.send(json.dumps(payload))
-                            await websocket.send(json.dumps(payload))
+                            await recipient_ws.send(json.dumps(file_payload))
+                            await websocket.send(json.dumps(file_payload))
                             for monitor in monitor_clients:
-                                await monitor.send(json.dumps(payload))
-                    else:
+                                await monitor.send(json.dumps(file_payload))
+                            continue
+                    else: # broadcast
                         for ws in clients:
-                            await ws.send(json.dumps(payload))
+                            await ws.send(json.dumps(file_payload))
                         for monitor in monitor_clients:
-                            await monitor.send(json.dumps(payload))
+                            await monitor.send(json.dumps(file_payload))
+                    continue
+
                 except json.JSONDecodeError:
                     pass
+
         except Exception as e:
             print(f"Error: {e}")
+
         finally:
             clients.pop(websocket, None)
             name_to_ws.pop(name, None)
             await broadcast_user_list()
 
-async def main():
-    # Start HTTP server in a separate thread
-    http_thread = threading.Thread(target=start_http_server, daemon=True)
-    http_thread.start()
 
-    async with websockets.serve(handler, "0.0.0.0", PORT, max_size=7 * 1024 * 1024):
-        print(f"WebSocket server running at ws://0.0.0.0:{PORT}")
+async def main():
+    async with serve(handler, "0.0.0.0", PORT, max_size = 7 * 1024 * 1024):
+        print("WebSocket server running at ws://localhost:12345")
         while True:
             await asyncio.sleep(1)
 
-if __name__ == "__main__":
-    asyncio.run(main())
+
+asyncio.run(main())
