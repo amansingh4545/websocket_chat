@@ -23,7 +23,7 @@ function joinChat() {
     Name = document.getElementById("nameInput").value.trim();
     if (!Name) return alert("Enter your name!");
 
-    socket = new WebSocket("ws://localhost:12345/");
+    socket = new WebSocket("wss://websocket-chat-45.onrender.com");
     socket.onopen = function () {
         socket.send(Name);
     };
