@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Chat Client</title>
+    <link rel="stylesheet" href="client.css">
+    <link rel="icon" href="user_icon.png" type="image/png">
+</head>
+<body>
+
+    <div class="wel" id="wel">
+        <div id="welcome" class="welcome">
+            <h2>Welcome to Chat</h2>
+            <input type="text" id="nameInput" placeholder="Enter your name" />
+            <br><br>
+            <button onclick="joinChat()">Join Chat</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="greet" id="greet">Welcome</div>
+
+    <div class="chatContainer" id="chatContainer">
+        <div id="chat">
+            <div id="chatBody">
+                <div id="userPanel">
+                    <h2>Active Users</h2>
+                    <ul id="userList"></ul>
+                </div>
+                <div id="chatPanel">
+                    <div id="messages"></div>
+                    <div id="inputArea">
+                        <input type="text" id="messageInput" placeholder="Type a message..." />
+                        <label for="fileInput" class="file-label" title="Send File">
+                            <img src="file_icon.png" alt="file_icon" />
+                        </label>
+                        <input type="file" id="fileInput" style="display: none;" />
+                        <button onclick="sendMessage()">Send</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="client.js"></script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Server Monitor</title>
+    <link rel="stylesheet" href="server.css">
+</head>
+<body>
+
+    <h2>Server Monitor</h2>
+    <h3>Connected Users:</h3>
+    <ul id="monitorUserList"></ul>
+
+    <h3>All Messages:</h3>
+    <div id="monitorMessages"></div>
+
+    <script>
+        const socket = new WebSocket("ws://localhost:12345/monitor");
+
+        socket.onmessage = event => {
+            let data;
+            try { data = JSON.parse(event.data); } catch { data = event.data; }
+
+            if (data.type === "users") {
+                const ul = document.getElementById("monitorUserList");
+                ul.innerHTML = "";
+                data.users.forEach(user => {
+                    const li = document.createElement("li");
+                    li.textContent = user;
+                    ul.appendChild(li);
+                });
+            } else if (data.type === "message") {
+                const msg = document.createElement("p");
+                msg.textContent = data.text;
+                document.getElementById("monitorMessages").appendChild(msg);
+            }
+        };
+    </script>
+</body>
+</html>
